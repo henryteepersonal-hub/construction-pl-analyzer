@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Construction P&L Analyzer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0b0f1a;
+    --surface:  #111827;
+    --card:     #161d2e;
+    --border:   #1f2d47;
+    --blue:     #3b82f6;
+    --blue-dim: #1e3a5f;
+    --amber:    #f59e0b;
+    --green:    #10b981;
+    --red:      #ef4444;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Inter', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── TOP BAR ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--blue);
+    letter-spacing: 0.05em;
+  }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--blue);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .header-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 4px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    margin-bottom: 48px;
+  }
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--blue);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .hero-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.15;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+  .hero-title span { color: var(--blue); }
+  .hero-sub {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.6;
+  }
+
+  /* ── INPUT PANEL ── */
+  .input-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  .panel-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .panel-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-ghost:hover { border-color: var(--blue); color: var(--blue); }
+
+  .panel-body { padding: 20px; }
+
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    padding: 14px 16px;
+    border-radius: 8px;
+    resize: vertical;
+    min-height: 180px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  textarea:focus { border-color: var(--blue); }
+  textarea::placeholder { color: var(--muted); }
+
+  .api-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    align-items: center;
+  }
+  .api-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .api-input:focus { border-color: var(--blue); }
+  .api-input::placeholder { color: var(--muted); }
+
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-primary:disabled { background: var(--blue-dim); cursor: not-allowed; opacity: 0.7; }
+
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: var(--blue-dim);
+    border: 1px solid var(--blue);
+    border-radius: 8px;
+    margin-bottom: 28px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--blue);
+  }
+  .status-bar.visible { display: flex; }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--blue-dim);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ERROR ── */
+  .error-bar {
+    display: none;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #1f0f0f;
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    margin-bottom: 28px;
+    font-size: 13px;
+    color: #fca5a5;
+  }
+  .error-bar.visible { display: flex; }
+
+  /* ── KPI GRID ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi-card.blue::before  { background: var(--blue); }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.amber::before { background: var(--amber); }
+  .kpi-card.red::before   { background: var(--red); }
+  .kpi-card.muted::before { background: var(--muted); }
+
+  .kpi-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 500;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .kpi-value.positive { color: var(--green); }
+  .kpi-value.negative { color: var(--red); }
+  .kpi-value.warning  { color: var(--amber); }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ── VERDICT BANNER ── */
+  .verdict {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    border: 1px solid;
+  }
+  .verdict.healthy  { background: #0a1f14; border-color: var(--green); }
+  .verdict.caution  { background: #1a1400; border-color: var(--amber); }
+  .verdict.critical { background: #1a0a0a; border-color: var(--red); }
+  .verdict-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+  .verdict-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .verdict.healthy  .verdict-label { color: var(--green); }
+  .verdict.caution  .verdict-label { color: var(--amber); }
+  .verdict.critical .verdict-label { color: var(--red); }
+  .verdict-text { font-size: 14px; color: var(--text); line-height: 1.6; }
+
+  /* ── TABS ── */
+  .tabs { margin-bottom: 0; }
+  .tab-list {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+    gap: 0;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  .tab-panel {
+    display: none;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 24px;
+  }
+  .tab-panel.active { display: block; }
+
+  .tab-panel p {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.8;
+    margin-bottom: 12px;
+  }
+
+  .item-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border-radius: 8px;
+    border-left: 3px solid;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .item.strength { border-color: var(--green); }
+  .item.risk     { border-color: var(--red); }
+  .item.rec      { border-color: var(--blue); }
+  .item-icon { flex-shrink: 0; font-size: 15px; }
+
+  /* ── RESULTS WRAPPER ── */
+  #results { display: none; }
+  #results.visible { display: block; }
+
+  /* ── USAGE LIMIT ── */
+  .usage-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .usage-row .hint { margin-top: 0; flex: 1; min-width: 200px; }
+  .usage-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .usage-badge.warning { border-color: var(--amber); }
+  .usage-badge.maxed   { border-color: var(--red); }
+  .usage-icon { font-size: 12px; }
+  #usageText {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .usage-badge.warning #usageText { color: var(--amber); }
+  .usage-badge.maxed   #usageText { color: var(--red); }
+  .btn-reset {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .btn-reset:hover { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    CONSTRUCT / ANALYZE
+  </div>
+  <div class="header-tag">Claude API · GC Finance Intelligence</div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-eyebrow">// Portfolio Analyzer v1.0</div>
+    <h1 class="hero-title">Construction P&L<br><span>Intelligence Engine</span></h1>
+    <p class="hero-sub">Paste your project cost data as CSV. Get CFO-grade analysis: margins, change order health, billing efficiency, retention exposure, and prioritized action items.</p>
+  </div>
+
+  <div class="input-panel">
+    <div class="panel-header">
+      <span class="panel-title">// Input — CSV Job Cost Data</span>
+      <div class="panel-actions">
+        <button class="btn-ghost" onclick="loadSample()">Load Sample Data</button>
+        <button class="btn-ghost" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <textarea id="csvInput" placeholder="Project,Contract Value,Change Orders,Revised Contract,Labor,Materials,Subcontractors,Equipment,Gross Profit,Overhead,Net Income,Billed to Date,Collected,Retention Held&#10;Copa de Oro,2400000,180000,2580000,410000,290000,680000,45000,1155000,231000,924000,2064000,1858000,206400&#10;Beverly Glen,1850000,95000,1945000,320000,215000,510000,38000,862000,172400,689600,1459000,1313000,145900"></textarea>
+
+      <div class="api-row">
+        <input type="password" class="api-input" id="apiKey" placeholder="sk-ant-... (Anthropic API key)" />
+        <button class="btn-primary" id="analyzeBtn" onclick="runAnalysis()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Run Analysis
+        </button>
+      </div>
+      <div class="usage-row">
+        <span class="hint">Required columns: Project, Contract Value, Change Orders, Revised Contract, Labor, Materials, Subcontractors, Equipment, Gross Profit, Overhead, Net Income, Billed to Date, Collected, Retention Held. Numbers only (no $ or commas).</span>
+        <div class="usage-badge" id="usageBadge">
+          <span class="usage-icon">⚡</span>
+          <span id="usageText">0 / 10 runs used</span>
+          <button class="btn-reset" onclick="resetUsage()" title="Reset usage counter">↺</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar">
+    <div class="spinner"></div>
+    <span id="statusText">Sending data to Claude...</span>
+  </div>
+
+  <div class="error-bar" id="errorBar">
+    <span>⚠</span>
+    <span id="errorText"></span>
+  </div>
+
+  <div id="results">
+    <!-- KPIs injected here -->
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- Verdict injected here -->
+    <div id="verdictBanner"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab-list">
+        <button class="tab-btn active" onclick="switchTab(this,'narrative')">Narrative</button>
+        <button class="tab-btn" onclick="switchTab(this,'strengths')">Strengths</button>
+        <button class="tab-btn" onclick="switchTab(this,'risks')">Risks</button>
+        <button class="tab-btn" onclick="switchTab(this,'recommendations')">Recommendations</button>
+      </div>
+      <div class="tab-panel active" id="tab-narrative"></div>
+      <div class="tab-panel" id="tab-strengths"></div>
+      <div class="tab-panel" id="tab-risks"></div>
+      <div class="tab-panel" id="tab-recommendations"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const SAMPLE_CSV = `Project,Contract Value,Change Orders,Revised Contract,Labor,Materials,Subcontractors,Equipment,Gross Profit,Overhead,Net Income,Billed to Date,Collected,Retention Held
+Copa de Oro,2400000,180000,2580000,410000,290000,680000,45000,1155000,231000,924000,2064000,1858000,206400
+Beverly Glen,1850000,95000,1945000,320000,215000,510000,38000,862000,172400,689600,1459000,1313000,145900
+Toyopa,3100000,240000,3340000,580000,410000,890000,62000,1398000,279600,1118400,2672000,2404000,267200
+Santa Monica,975000,42000,1017000,185000,130000,285000,22000,395000,79000,316000,711900,640000,71190
+Las Lomas,1625000,88000,1713000,295000,198000,465000,31000,724000,144800,579200,1199100,1079000,120000`;
+
+const MAX_RUNS = 10;
+const STORAGE_KEY = 'pl_analyzer_runs';
+
+function getUsage() {
+  return parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+}
+function incrementUsage() {
+  const n = getUsage() + 1;
+  localStorage.setItem(STORAGE_KEY, n);
+  return n;
+}
+function resetUsage() {
+  localStorage.setItem(STORAGE_KEY, '0');
+  updateUsageBadge();
+}
+function updateUsageBadge() {
+  const used = getUsage();
+  const remaining = MAX_RUNS - used;
+  const badge = document.getElementById('usageBadge');
+  const text  = document.getElementById('usageText');
+  text.textContent = `${used} / ${MAX_RUNS} runs used`;
+  badge.classList.remove('warning', 'maxed');
+  if (used >= MAX_RUNS) badge.classList.add('maxed');
+  else if (remaining <= 3) badge.classList.add('warning');
+  document.getElementById('analyzeBtn').disabled = used >= MAX_RUNS;
+}
+
+window.addEventListener('DOMContentLoaded', updateUsageBadge);
+
+function loadSample() {
+  document.getElementById('csvInput').value = SAMPLE_CSV;
+}
+
+function clearAll() {
+  document.getElementById('csvInput').value = '';
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('errorBar').classList.remove('visible');
+}
+
+function setStatus(msg) {
+  document.getElementById('statusText').textContent = msg;
+  document.getElementById('statusBar').classList.add('visible');
+}
+function hideStatus() {
+  document.getElementById('statusBar').classList.remove('visible');
+}
+function showError(msg) {
+  document.getElementById('errorText').textContent = msg;
+  document.getElementById('errorBar').classList.add('visible');
+}
+function hideError() {
+  document.getElementById('errorBar').classList.remove('visible');
+}
+
+function switchTab(btn, id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+function fmt(n) {
+  if (Math.abs(n) >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M';
+  if (Math.abs(n) >= 1000)    return '$' + (n/1000).toFixed(0) + 'K';
+  return '$' + n.toFixed(0);
+}
+function pct(n) { return (n * 100).toFixed(1) + '%'; }
+
+function renderKPIs(data) {
+  const g = document.getElementById('kpiGrid');
+  g.innerHTML = '';
+  const cards = [
+    { label: 'Total Contract Value', value: fmt(data.total_revised_contract), sub: `${data.project_count} projects`, color: 'blue' },
+    { label: 'Portfolio Gross Margin', value: pct(data.avg_gross_margin), sub: 'Target: 40–50% GC standard', color: data.avg_gross_margin >= 0.40 ? 'green' : data.avg_gross_margin >= 0.30 ? 'amber' : 'red',
+      valueClass: data.avg_gross_margin >= 0.40 ? 'positive' : data.avg_gross_margin >= 0.30 ? 'warning' : 'negative' },
+    { label: 'Avg Net Margin', value: pct(data.avg_net_margin), sub: 'After overhead allocation', color: data.avg_net_margin >= 0.25 ? 'green' : 'amber',
+      valueClass: data.avg_net_margin >= 0.25 ? 'positive' : 'warning' },
+    { label: 'Change Order Rate', value: pct(data.avg_co_rate), sub: 'Avg % above base contract', color: data.avg_co_rate <= 0.10 ? 'green' : data.avg_co_rate <= 0.15 ? 'amber' : 'red' },
+    { label: 'Billing Efficiency', value: pct(data.billing_efficiency), sub: 'Billed ÷ Revised Contract', color: data.billing_efficiency >= 0.90 ? 'green' : 'amber',
+      valueClass: data.billing_efficiency >= 0.90 ? 'positive' : 'warning' },
+    { label: 'Total Retention Held', value: fmt(data.total_retention), sub: 'Uncollected across portfolio', color: 'amber' },
+  ];
+  cards.forEach(c => {
+    const div = document.createElement('div');
+    div.className = `kpi-card ${c.color}`;
+    div.innerHTML = `
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value ${c.valueClass || ''}">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>`;
+    g.appendChild(div);
+  });
+}
+
+function renderVerdict(data) {
+  const v = data.verdict;
+  const cls = v.rating === 'healthy' ? 'healthy' : v.rating === 'caution' ? 'caution' : 'critical';
+  const icon = cls === 'healthy' ? '✓' : cls === 'caution' ? '⚠' : '✕';
+  document.getElementById('verdictBanner').innerHTML = `
+    <div class="verdict ${cls}" style="margin-bottom:28px">
+      <div class="verdict-icon">${icon}</div>
+      <div>
+        <div class="verdict-label">Portfolio Verdict · ${v.rating.toUpperCase()}</div>
+        <div class="verdict-text">${v.summary}</div>
+      </div>
+    </div>`;
+}
+
+function renderNarrative(text) {
+  const el = document.getElementById('tab-narrative');
+  el.innerHTML = text.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('');
+}
+
+function renderList(items, type, panelId) {
+  const icon = type === 'strength' ? '↑' : type === 'risk' ? '↓' : '→';
+  const el = document.getElementById(panelId);
+  el.innerHTML = `<ul class="item-list">${items.map(i =>
+    `<li class="item ${type}"><span class="item-icon">${icon}</span>${i}</li>`
+  ).join('')}</ul>`;
+}
+
+async function runAnalysis() {
+  hideError();
+  const csv = document.getElementById('csvInput').value.trim();
+  const key = document.getElementById('apiKey').value.trim();
+  if (!csv) { showError('Paste or load CSV data before running analysis.'); return; }
+  if (!key) { showError('Enter your Anthropic API key to proceed.'); return; }
+
+  const used = getUsage();
+  if (used >= MAX_RUNS) {
+    showError(`Run limit reached (${MAX_RUNS} runs). Hit the ↺ button next to the counter to reset.`);
+    return;
+  }
+
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('results').classList.remove('visible');
+  setStatus('Parsing CSV and sending to Claude...');
+
+  const SYSTEM = `You are a senior construction CFO analyst specializing in high-end residential GC projects in Los Angeles. Analyze the provided project cost CSV and return ONLY a valid JSON object with this exact structure — no markdown, no prose outside the JSON:
+
+{
+  "portfolio_metrics": {
+    "total_revised_contract": <number>,
+    "project_count": <number>,
+    "avg_gross_margin": <decimal 0-1>,
+    "avg_net_margin": <decimal 0-1>,
+    "avg_co_rate": <decimal 0-1>,
+    "billing_efficiency": <decimal 0-1>,
+    "total_retention": <number>
+  },
+  "verdict": {
+    "rating": "healthy" | "caution" | "critical",
+    "summary": "<2-3 sentence executive summary of portfolio health>"
+  },
+  "narrative": "<3-4 paragraph CFO-level portfolio narrative covering margin performance, change order strategy, billing vs collection gaps, retention exposure, and any concentration risk. Use specific project names and dollar figures.>",
+  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
+  "risks": ["<risk 1>", "<risk 2>", "<risk 3>"],
+  "recommendations": ["<actionable rec 1>", "<actionable rec 2>", "<actionable rec 3>"]
+}
+
+Benchmark context for LA luxury residential GCs:
+- Gross margin healthy: 40–50%. Below 35% is a warning.
+- Net margin healthy: 25–35%. Below 20% needs attention.
+- Change order rate: Under 10% is clean. 10–15% is moderate. Over 15% may signal scope control issues or underestimation.
+- Billing efficiency: Above 90% is strong. Below 80% indicates cash flow drag.
+- Retention: Flag total retention > 8% of revised contract as elevated.
+- Subcontractor concentration: If subs > 40% of direct costs on any project, flag dependency risk.`;
+
+  try {
+    setStatus('Claude is analyzing your portfolio...');
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        system: SYSTEM,
+        messages: [{ role: 'user', content: `Here is the project cost CSV:\n\n${csv}\n\nReturn the JSON analysis now.` }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `API error ${res.status}`);
+    }
+
+    setStatus('Rendering results...');
+    const data = await res.json();
+    incrementUsage();
+    updateUsageBadge();
+    const raw = data.content.map(b => b.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    const m = parsed.portfolio_metrics;
+
+    renderKPIs(m);
+    renderVerdict(parsed);
+    renderNarrative(parsed.narrative);
+    renderList(parsed.strengths, 'strength', 'tab-strengths');
+    renderList(parsed.risks, 'risk', 'tab-risks');
+    renderList(parsed.recommendations, 'rec', 'tab-recommendations');
+
+    document.getElementById('results').classList.add('visible');
+    hideStatus();
+  } catch(e) {
+    hideStatus();
+    showError('Analysis failed: ' + e.message);
+  } finally {
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+}
+</script>
+</body>
+</html>
