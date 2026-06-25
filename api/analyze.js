@@ -46,11 +46,24 @@ Rules:
     if (!response.ok) return res.status(500).json({ error: data?.error?.message || JSON.stringify(data) });
 
     const raw = (data.content || []).map(b => b.text || '').join('');
-    const clean = raw.replace(/```json|```/g, '').trim();
+
+    // Strip all markdown code fences robustly
+    const clean = raw
+      .replace(/^```[a-z]*\s*/i, '')
+      .replace(/\s*```\s*$/i, '')
+      .trim();
 
     try {
       return res.status(200).json(JSON.parse(clean));
     } catch(e) {
+      // Try extracting JSON between first { and last }
+      const start = raw.indexOf('{');
+      const end = raw.lastIndexOf('}');
+      if (start !== -1 && end !== -1) {
+        try {
+          return res.status(200).json(JSON.parse(raw.slice(start, end + 1)));
+        } catch(e2) {}
+      }
       return res.status(500).json({ error: 'Parse failed: ' + raw.slice(0, 300) });
     }
   } catch (e) {
