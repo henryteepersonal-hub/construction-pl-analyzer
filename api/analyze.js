@@ -10,6 +10,11 @@ module.exports = async function handler(req, res) {
   if (!csv) return res.status(400).json({ error: 'Missing csv' });
   if (!apiKey) return res.status(400).json({ error: 'Missing apiKey' });
 
+  const SYSTEM = `You are a construction CFO analyst. Analyze the CSV and return ONLY this JSON structure with no extra text:
+{"portfolio_metrics":{"total_revised_contract":0,"project_count":0,"avg_gross_margin":0,"avg_net_margin":0,"avg_co_rate":0,"billing_efficiency":0,"total_retention":0},"verdict":{"rating":"healthy","summary":"text"},"narrative":"text","strengths":["s1","s2","s3"],"risks":["r1","r2","r3"],"recommendations":["r1","r2","r3"]}
+
+Benchmarks: gross margin healthy 40-50%, net margin 25-35%, CO rate under 10% clean, billing efficiency above 90% strong, retention over 8% elevated. Use specific project names and dollar figures in narrative.`;
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -20,13 +25,23 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 100,
-        messages: [{ role: 'user', content: 'Say hello in JSON: {"message":"hello"}' }]
+        max_tokens: 1500,
+        system: SYSTEM,
+        messages: [{ role: 'user', content: `CSV:\n\n${csv}\n\nReturn JSON only.` }]
       })
     });
 
     const data = await response.json();
-    return res.status(200).json({ status: response.status, data });
+    if (!response.ok) return res.status(500).json({ error: data?.error?.message || JSON.stringify(data) });
+
+    const raw = (data.content || []).map(b => b.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+
+    try {
+      return res.status(200).json(JSON.parse(clean));
+    } catch(e) {
+      return res.status(500).json({ error: 'Parse failed: ' + raw.slice(0, 300) });
+    }
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
