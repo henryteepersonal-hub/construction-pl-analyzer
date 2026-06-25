@@ -36,7 +36,7 @@ Rules:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
+        max_tokens: 2500,
         system: SYSTEM,
         messages: [{ role: 'user', content: `Job cost report CSV:\n\n${csv}\n\nReturn JSON analysis only.` }]
       })
